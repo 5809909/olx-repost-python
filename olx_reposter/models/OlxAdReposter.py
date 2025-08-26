@@ -1,5 +1,4 @@
 import os
-import shutil
 import time
 
 import DrissionPage.errors
@@ -19,7 +18,8 @@ class OlxAdReposter:
 
     async def write_to_db(self, index, source_email: str, source_password: str, database: str):
         self._authenticate_user(source_email, source_password)
-        data = capture_network_response(self.page, 'https://production-graphql.eu-sharedservices.olxcdn.com/graphql')
+        data = capture_network_response(self.page,
+                                        'https://production-graphql.eu-sharedservices.olxcdn.com/graphql')
         if database == 'postgres':
             await PostgresDatabaseModel.store_ad(index, data)
         else:
@@ -54,7 +54,8 @@ class OlxAdReposter:
         if is_second_account:
             self.page.get('https://www.olx.pl/adding/')
         else:
-            self.page.get('http://www.olx.pl/konto/?ref[0][params][url]=http%3A%2F%2Fwww.olx.pl%2F&ref[0][action]=redirector&ref[0][method]=index')
+            self.page.get(
+                'http://www.olx.pl/konto/?ref[0][params][url]=http%3A%2F%2Fwww.olx.pl%2F&ref[0][action]=redirector&ref[0][method]=index')
 
         self.page.ele('xpath://*[@id="username"]').input(email)
         self.page.ele('xpath://*[@id="password"]').input(password)
@@ -67,6 +68,8 @@ class OlxAdReposter:
         self.page.ele('xpath://button[@class="css-7svm16"]/span[text()="Zmień"]').click()
         self.page.ele('xpath://input[@placeholder="Szukaj"]').input(data['category_label'])
         self.page.ele(f'xpath://div[@class="css-1msmb8o"]/button/span/p[text()="{data["category_label"]}"]').click()
+        if self.page.ele('xpath://*[@id="posting-form"]/main/div[2]/div/button'):
+            self.page.ele('xpath://*[@id="posting-form"]/main/div[2]/div/button').click()
         for index, image_path in enumerate(data['images']):
             self.page.ele(f'xpath://*[@id="{index}"]').input(image_path)
 
@@ -101,13 +104,15 @@ class OlxAdReposter:
         self.page.ele('xpath://input[@name="city_id"]').input(data['location'])
 
         self.page.ele('xpath://button[@data-testid="submit-btn"]').click()
-        try:
-            if self.page.ele('xpath://button[@data-cy="purchase-dont-promote"]'):
-                self.page.ele('xpath://button[@data-cy="purchase-dont-promote"]').click()
-                self.page.ele('xpath://div[@class="css-1buxhyn"]//button[@data-button-variant="primary"]').click()
-            else:
-                raise OlxAccountError("The trial period for this account has ended. Please create a new one.")
+        if self.page.ele('xpath://button[@data-cy="purchase-dont-promote"]'):
+            self.page.ele('xpath://button[@data-cy="purchase-dont-promote"]').click()
+            self.page.ele('xpath://div[@class="css-1buxhyn"]//button[@data-button-variant="primary"]').click()
+        else:
+            raise OlxAccountError("The trial period for this account has ended. Please create a new one.")
 
-        finally:
-            shutil.rmtree('account_ads_data', ignore_errors=True)
+    def page_close(self):
+        try:
             self.page.close()
+        except DrissionPage.errors.PageDisconnectedError:
+            pass
+        return

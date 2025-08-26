@@ -14,7 +14,7 @@ async def main():
                                                             emails[single_data[1] - 1], password,
                                                             emails[single_data[2] - 1], password, "mysql")
         else:
-            continue
+            olx_reposter.page_close()
 
 
 if __name__ == '__main__':
