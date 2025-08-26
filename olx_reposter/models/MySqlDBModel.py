@@ -48,6 +48,7 @@ class MySQLDatabaseModel:
         await conn.close()
 
     async def store_ad(self, index, data, date_run_script, time_run_script):
+        await self._init_db()
         for ad in data:
             ad_id = ad['id']
             ad_activated_date = ad['activatedAt']
@@ -56,7 +57,6 @@ class MySQLDatabaseModel:
             ad_price = int(ad['price'])
             ad_views = ad['stats']['views']
             ad_favorites = ad['stats']['observed']
-            ad_calls = ad['stats']['phones']
             conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
             cur = await conn.cursor()
             await cur.execute(
