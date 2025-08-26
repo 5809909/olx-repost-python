@@ -28,6 +28,7 @@ class MySQLDatabaseModel:
                             likes INT NOT NULL,
                             start_date DATE NOT NULL,
                             end_date DATE NOT NULL,
+                            end_time TIME NOT NULL,
                             date DATE NOT NULL,
                             time TIME NOT NULL,
                         )
@@ -62,7 +63,7 @@ class MySQLDatabaseModel:
                 '''INSERT INTO olx(
                     acc_id, advertising_id, title, price, views, likes,
                     start_date, end_date, end_time, date, time)
-                 VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+                 VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                 (index, ad_id,
                  ad_id,
                  ad_title,
