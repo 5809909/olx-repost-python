@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 from mysql.connector.aio import connect
 
@@ -6,8 +6,47 @@ from ..config import mysql_user, mysql_password, mysql_database, mysql_host
 
 
 class MySQLDatabaseModel:
+
     @staticmethod
-    async def store_ad(index, data):
+    async def _init_db():
+        conn = await connect(
+            user=mysql_user,
+            password=mysql_password,
+            database=mysql_database,
+            host=mysql_host,
+        )
+
+        async with conn.cursor() as cur:
+            await cur.execute('''
+                        CREATE TABLE IF NOT EXISTS olx (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            acc_id INT NOT NULL,
+                            advertising_id INT NOT NULL,
+                            title TEXT NOT NULL,
+                            price INT NOT NULL,
+                            views INT NOT NULL,
+                            likes INT NOT NULL,
+                            start_date DATE NOT NULL,
+                            end_date DATE NOT NULL,
+                            date DATE NOT NULL,
+                            time TIME NOT NULL,
+                        )
+                    ''')
+
+            await cur.execute('''
+                        CREATE TABLE IF NOT EXISTS transfer_ads (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            advertising_id INT NOT NULL,
+                            account_to INT NOT NULL,
+                            account_from INT NOT NULL,
+                            is_transferred BOOLEAN DEFAULT FALSE
+                        )
+                    ''')
+
+        await conn.commit()
+        await conn.close()
+
+    async def store_ad(self, index, data, date_run_script, time_run_script):
         for ad in data:
             ad_id = ad['id']
             ad_activated_date = ad['activatedAt']
@@ -20,12 +59,22 @@ class MySQLDatabaseModel:
             conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
             cur = await conn.cursor()
             await cur.execute(
-                '''INSERT INTO olx(account_id,advertising_id,title,price,start_date,end_date,views,likes,
-                calls,date,time) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+                '''INSERT INTO olx(
+                    acc_id, advertising_id, title, price, views, likes,
+                    start_date, end_date, end_time, date, time)
+                 VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                 (index, ad_id,
-                ad_title, ad_price, ad_activated_date, ad_validTo_date, ad_views, ad_favorites, ad_calls,
-                str(datetime.datetime.today()),
-                str(datetime.datetime.today().strftime("%H:%M"))))
+                 ad_id,
+                 ad_title,
+                 ad_price,
+                 ad_views,
+                 ad_favorites,
+                 datetime.fromisoformat(ad_activated_date).replace(tzinfo=None).date(),
+                 datetime.fromisoformat(ad_validTo_date).replace(tzinfo=None).date(),
+                 datetime.fromisoformat(ad_validTo_date).replace(tzinfo=None).time(),
+                 date_run_script,
+                 time_run_script
+                 ))
             await conn.commit()
             await conn.close()
 
@@ -36,9 +85,8 @@ class MySQLDatabaseModel:
         rows = await cur.fetchall()
         await conn.close()
         return rows if rows else []
-    
-    @staticmethod
-    async def check_ad_in_db(ad_id):
+
+    async def check_ad_in_db(self, ad_id):
         conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
         cur = await conn.cursor()
         await cur.execute("SELECT * FROM olx WHERE advertising_id = %s", (ad_id,))

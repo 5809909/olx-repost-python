@@ -1,3 +1,4 @@
+import datetime
 import os
 import time
 
@@ -15,23 +16,30 @@ from ..utils.network_listener_for_db import capture_network_response
 class OlxAdReposter:
     def __init__(self):
         self.page = create_page()
+        self.date_run_script = datetime.datetime.today().replace(second=0, microsecond=0).date()
+        self.time_run_script = datetime.datetime.today().replace(second=0, microsecond=0).time()
 
     async def write_to_db(self, index, source_email: str, source_password: str, database: str):
-        self._authenticate_user(source_email, source_password)
-        data = capture_network_response(self.page,
-                                        'https://production-graphql.eu-sharedservices.olxcdn.com/graphql')
-        if database == 'postgres':
-            await PostgresDatabaseModel.store_ad(index, data)
-        else:
-            await MySQLDatabaseModel.store_ad(index, data)
+        try:
+            self._authenticate_user(source_email, source_password)
+            data = capture_network_response(self.page,
+                                            'https://production-graphql.eu-sharedservices.olxcdn.com/graphql')
+            if database == 'postgres':
+                await PostgresDatabaseModel().store_ad(index, data, self.date_run_script, self.time_run_script)
+            else:
+                await MySQLDatabaseModel().store_ad(index, data, self.date_run_script, self.time_run_script)
+        except Exception as e:
+            self.page.close()
+            print(e)
+            raise OlxAccountError(f"An error occurred while processing the account {source_email}: {e}")
 
     async def transfer_ad_between_accounts(self, ad_id: int, source_email: str, source_password: str,
                                            target_email: str, target_password: str, database: str):
         try:
             if database == 'postgres':
-                ad_id_in_db = await PostgresDatabaseModel.check_ad_in_db(ad_id)
+                ad_id_in_db = await PostgresDatabaseModel().check_ad_in_db(ad_id)
             else:
-                ad_id_in_db = await MySQLDatabaseModel.check_ad_in_db(ad_id)
+                ad_id_in_db = await MySQLDatabaseModel().check_ad_in_db(ad_id)
             self._authenticate_user(source_email, source_password)
             AdDataExtractor.extract_and_save_ad_data(self.page, ad_id_in_db)
             self._authenticate_user(target_email, target_password, True)
