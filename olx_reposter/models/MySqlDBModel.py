@@ -102,10 +102,10 @@ class MySQLDatabaseModel:
             return int(row[2])
 
 
-@staticmethod
-async def update_is_transferred_field_in_transfer_db(ad_id: int):
-    conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
-    cur = await conn.cursor()
-    await cur.execute("UPDATE transfer_ads SET is_transferred = %s WHERE advertising_id = %s", (True, ad_id))
-    await conn.commit()
-    await conn.close()
+    @staticmethod
+    async def update_is_transferred_field_in_transfer_db(ad_id: int):
+        conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
+        cur = await conn.cursor()
+        await cur.execute("UPDATE transfer_ads SET is_transferred = %s WHERE advertising_id = %s", (True, ad_id))
+        await conn.commit()
+        await conn.close()
