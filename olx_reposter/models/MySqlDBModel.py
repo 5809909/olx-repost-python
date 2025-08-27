@@ -48,61 +48,58 @@ class MySQLDatabaseModel:
         await conn.commit()
         await conn.close()
 
+    async def store_ad(self, index, data, date_run_script, time_run_script):
+        await self._init_db()
+        for ad in data:
+            ad_id = ad['id']
+            ad_activated_date = ad['activatedAt']
+            ad_validTo_date = ad['validTo']
+            ad_title = ad['title']
+            ad_price = int(ad['price'])
+            ad_views = ad['stats']['views']
+            ad_favorites = ad['stats']['observed']
+            conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
+            cur = await conn.cursor()
+            await cur.execute(
+                '''INSERT INTO olx(
+                    acc_id, advertising_id, title, price, views, likes,
+                    start_date, end_date, end_time, date, time)
+                 VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+                (index, ad_id,
+                 ad_id,
+                 ad_title,
+                 ad_price,
+                 ad_views,
+                 ad_favorites,
+                 datetime.fromisoformat(ad_activated_date).replace(tzinfo=None).date(),
+                 datetime.fromisoformat(ad_validTo_date).replace(tzinfo=None).date(),
+                 datetime.fromisoformat(ad_validTo_date).replace(tzinfo=None).time(),
+                 date_run_script,
+                 time_run_script
+                 ))
+            await conn.commit()
+            await conn.close()
 
-async def store_ad(self, index, data, date_run_script, time_run_script):
-    await self._init_db()
-    for ad in data:
-        ad_id = ad['id']
-        ad_activated_date = ad['activatedAt']
-        ad_validTo_date = ad['validTo']
-        ad_title = ad['title']
-        ad_price = int(ad['price'])
-        ad_views = ad['stats']['views']
-        ad_favorites = ad['stats']['observed']
+    async def select_all_rows_from_transfer_db(self):
         conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
         cur = await conn.cursor()
-        await cur.execute(
-            '''INSERT INTO olx(
-                acc_id, advertising_id, title, price, views, likes,
-                start_date, end_date, end_time, date, time)
-             VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
-            (index, ad_id,
-             ad_id,
-             ad_title,
-             ad_price,
-             ad_views,
-             ad_favorites,
-             datetime.fromisoformat(ad_activated_date).replace(tzinfo=None).date(),
-             datetime.fromisoformat(ad_validTo_date).replace(tzinfo=None).date(),
-             datetime.fromisoformat(ad_validTo_date).replace(tzinfo=None).time(),
-             date_run_script,
-             time_run_script
-             ))
-        await conn.commit()
+        await cur.execute("SELECT * FROM transfer_ads")
+        rows = await cur.fetchall()
+        await conn.close()
+        return rows if rows else []
+
+    async def check_ad_in_db(self, ad_id):
+        conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
+        cur = await conn.cursor()
+        await cur.execute("SELECT * FROM olx WHERE advertising_id = %s", (ad_id,))
+        row = await cur.fetchone()
+
         await conn.close()
 
-
-async def select_all_rows_from_transfer_db(self):
-    conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
-    cur = await conn.cursor()
-    await cur.execute("SELECT * FROM transfer_ads")
-    rows = await cur.fetchall()
-    await conn.close()
-    return rows if rows else []
-
-
-async def check_ad_in_db(self, ad_id):
-    conn = await connect(user=mysql_user, password=mysql_password, database=mysql_database, host=mysql_host)
-    cur = await conn.cursor()
-    await cur.execute("SELECT * FROM olx WHERE advertising_id = %s", (ad_id,))
-    row = await cur.fetchone()
-
-    await conn.close()
-
-    if row is None:
-        raise Exception("ID IS NONE")
-    else:
-        return int(row[2])
+        if row is None:
+            raise Exception("ID IS NONE")
+        else:
+            return int(row[2])
 
 
 @staticmethod
