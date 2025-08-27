@@ -31,7 +31,7 @@ class MySQLDatabaseModel:
                             end_date DATE NOT NULL,
                             end_time TIME NOT NULL,
                             date DATE NOT NULL,
-                            time TIME NOT NULL,
+                            time TIME NOT NULL
                         )
                     ''')
 
